@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: "-js"  # Enable JetStream
+
+  nats-service:
+    build:
+      context: ./nats-service
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+
+  order-service:
+    build:
+      context: . 
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - nats
+      - nats-service
+    environment:
+      - NATS_URL=nats://nats:4222
+      - SERVICE_PORT=50051
+
+  inventory-service:
+    build:
+      context: . 
+      dockerfile: inventory-service/Dockerfile
+    ports:
+      - "50052:50052"
+    depends_on:
+      - nats
+      - nats-service
+    environment:
+      - NATS_URL=nats://nats:4222
+      - SERVICE_PORT=50052
+
+  api-gateway:
+    build:
+      context: . 
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - order-service
+      - inventory-service
+      - nats-service
+    environment:
+      - ORDER_SERVICE_URL=order-service:50051
+      - INVENTORY_SERVICE_URL=inventory-service:50052
+      - NATS_URL=nats://nats:4222
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+      - MONGO_INITDB_DATABASE=statistics
+    volumes:
+      - mongo-data:/data/db
+
+  statistics-service:
+    build:
+      context: . 
+      dockerfile: statistics-service/Dockerfile
+    depends_on:
+      - mongodb
+      - nats
+      - nats-service
+    environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/statistics?authSource=admin
+      - NATS_URL=nats://nats:4222
+    ports:
+      - "50053:50053"
+
+volumes:
+  mongo-data:

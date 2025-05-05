@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package ecommerce.proto;
+option go_package = "ecommerce/proto";
+
+service StatisticsService {
+  rpc GetUserOrdersStatistics (UserOrderStatisticsRequest) returns (UserOrderStatisticsResponse);
+  rpc GetUserStatistics (UserStatisticsRequest) returns (UserStatisticsResponse);
+}
+
+message UserOrderStatisticsRequest {
+  string user_id = 1;
+}
+
+message UserOrderStatisticsResponse {
+  int32 total_orders = 1;
+  repeated string order_ids = 2;
+}
+
+message UserStatisticsRequest {
+  string user_id = 1;
+}
+
+message UserStatisticsResponse {
+  int32 total_orders = 1;
+  int32 total_products = 2;
+  string most_active_hour = 3;
+  int32 total_users = 4;
+} 
